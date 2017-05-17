@@ -40,8 +40,8 @@ int			main(void)
 	msg = encrypt(msg, key, len);
 	printf("After:\n");
 	print_msg(msg, len);
-	//msg = decrypt(msg, key, len);
-	//printf("Decrypted:\n");
-	//print_msg(msg, len);
+	msg = decrypt(msg, key, len);
+	printf("Decrypted:\n");
+	print_msg(msg, len);
 	return (0);
 }

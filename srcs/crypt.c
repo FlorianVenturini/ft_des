@@ -228,40 +228,49 @@ static uint64_t	ft(uint64_t r, uint64_t k)
 	return (ret);
 }
 
+// Generates every k once for the whole encryption process
+static uint64_t	*generate_keys(uint64_t key)
+{
+	uint32_t	i; // ITERATOR
+	uint64_t	c = key >> 28;
+	uint64_t	d = (key << 36) >> 36;
+	uint64_t	*k = (uint64_t *)malloc(sizeof(uint64_t) * 16);
+
+	if (!k)
+		return (NULL);
+	for (i = 0; i < 16; ++i)
+	{
+		c = rol_subkey(c, i);
+		d = rol_subkey(d, i);
+		k[i] = permute(subkeycat(c, d), pc2, 48, 56);
+	}
+	return (k);
+}
+
 // Encryption function. This is where the magic happens
 uint8_t		*encrypt(uint8_t *msg, uint64_t key, size_t len)
 {
 	size_t		max_len = (len / 8) * 8;
 	uint32_t	i; // ITERATOR
 	uint32_t	j; // ITERATOR
-	uint64_t	new_key = permute(key, pc1, 56, 64);
-	uint64_t	c; // SUBKEY #1
-	uint64_t	d; // SUBKEY #2
-	uint64_t	k; // SUBKEY cat(c, d) + permutation
+	uint64_t	*k = generate_keys(permute(key, pc1, 56, 64));
 	uint64_t	m; // MSG AS 64bits VALUE
 	uint64_t	l; // LEFT PART OF m
 	uint64_t	r; // RIGHT PART OF m
-	uint64_t	tmp_l; // USED AS BUFFER FOR l IN FOR LOOP
-	uint64_t	tmp_r; // USED AS BUFFER FOR r IN FOR LOOP
+	uint64_t	tmp; // USED AS BUFFER FOR l IN FOR LOOP
 
 
 	// The message can be more than 8 bytes long, we do the same operations every 8 bytes
 	for (i = 0; i < max_len; i += 8)
 	{
-		c = new_key >> 28;
-		d = (new_key << 36) >> 36;
 		m = permute(get_m(&msg[i]), init_perm, 64, 64);
 		l = m >> 32;
 		r = (m << 32) >> 32;
 		for (j = 0; j < 16; ++j)
 		{
-			c = rol_subkey(c, j);
-			d = rol_subkey(d, j);
-			k = permute(subkeycat(c, d), pc2, 48, 56);
-			tmp_l = l;
-			tmp_r = r;
+			tmp = l;
 			l = r;
-			r = tmp_l ^ ft(tmp_r, k);
+			r = tmp ^ ft(r, k[j]);
 		}
 		m = permute((r << 32) + l, final_perm, 64, 64);
 		set_m(&msg[i], m);
@@ -270,5 +279,42 @@ uint8_t		*encrypt(uint8_t *msg, uint64_t key, size_t len)
 	// Instead of padding the last bytes with zeroes, we XOR them with the original key
 	for(i = max_len; i < len; ++i)
 		msg[i] ^= key;
+	free(k);
+	return (msg);
+}
+
+// Decryption function. Almost identical to the encrypt() function
+uint8_t		*decrypt(uint8_t *msg, uint64_t key, size_t len)
+{
+	size_t		max_len = (len / 8) * 8;
+	uint32_t	i; // ITERATOR
+	uint32_t	j; // ITERATOR
+	uint64_t	*k = generate_keys(permute(key, pc1, 56, 64));
+	uint64_t	m; // MSG AS 64bits VALUE
+	uint64_t	l; // LEFT PART OF m
+	uint64_t	r; // RIGHT PART OF m
+	uint64_t	tmp; // USED AS BUFFER FOR l IN FOR LOOP
+
+
+	// The message can be more than 8 bytes long, we do the same operations every 8 bytes
+	for (i = 0; i < max_len; i += 8)
+	{
+		m = permute(get_m(&msg[i]), init_perm, 64, 64);
+		l = m >> 32;
+		r = (m << 32) >> 32;
+		for (j = 0; j < 16; ++j)
+		{
+			tmp = l;
+			l = r;
+			r = tmp ^ ft(r, k[15 - j]);
+		}
+		m = permute((r << 32) + l, final_perm, 64, 64);
+		set_m(&msg[i], m);
+	}
+
+	// Instead of padding the last bytes with zeroes, we XOR them with the original key
+	for(i = max_len; i < len; ++i)
+		msg[i] ^= key;
+	free(k);
 	return (msg);
 }

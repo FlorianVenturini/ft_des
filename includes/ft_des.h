@@ -15,6 +15,7 @@
 
 // CRYPT.C
 uint8_t		*encrypt(uint8_t *msg, uint64_t key, size_t len);
+uint8_t		*decrypt(uint8_t *msg, uint64_t key, size_t len);
 
 // FT_ULITOA_BASE.C
 char		*ft_ulitoa_base(uint64_t n, uint32_t base);
