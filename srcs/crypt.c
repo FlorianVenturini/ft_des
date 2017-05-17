@@ -211,7 +211,7 @@ static uint8_t		replace(const uint8_t block, const uint32_t table[4][16])
 	return (table[i][j]);
 }
 
-// Used for the computation of 
+// Used for the computation of <r> (cf. encrypt function)
 static uint64_t	ft(uint64_t r, uint64_t k)
 {
 	uint64_t	exp_r = permute(r, expand, 48, 32);
